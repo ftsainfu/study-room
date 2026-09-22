@@ -1,118 +1,503 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>自習室預約與掃碼系統</title>
-    <style>
-      body { font-family: Arial, sans-serif; padding: 20px; }
-      /* 您原本的 CSS 樣式會放在這裡 */
-    </style>
-  </head>
-  <body>
-    <!-- 您原本的網頁內容、掃碼區塊、報到按鈕等放在這裡 -->
-    <h2>自習室掃碼報到系統</h2>
-    <p>您掃描的座位號碼為：<span id="seatDisplay"><?= scannedSeat ?></span></p>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自習室預約與掃碼系統</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Google Fonts Outfit & Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body {
+font-family: 'Inter', 'Outfit', sans-serif;
+background: radial-gradient(circle at top right, #f8fafc, #e2e8f0);
+min-height: 100vh;
+}
+.glass-card {
+background: rgba(255, 255, 255, 0.85);
+backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.5);
+}
+</style>
+<script>
+// 注入後端的掃描座位參數 (同時相容 GAS 範本與外部網域 url query)
+let scannedSeatCode = "<?= scannedSeat ?>";
+if (scannedSeatCode.indexOf('\x3c?=') !== -1 || scannedSeatCode.indexOf('\x3c?') !== -1) {
+const urlParams = new URLSearchParams(window.location.search);
+scannedSeatCode = urlParams.get('seat') || "";
+}
+</script>
+</head>
+<body class="text-slate-800 antialiased p-4 md:p-8">
+<div class="max-w-4xl mx-auto">
+<!-- Header -->
+<header class="text-center mb-8">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white text-3xl shadow-lg shadow-blue-500/30 mb-4">
+<i class="fa-solid fa-graduation-cap"></i>
+</div>
+<h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">自習室智慧預約打卡系統</h1>
+<p class="text-slate-500 mt-2">提供週一至週五 9:00 - 17:00 時段預約，每次最長 3 小時</p>
+</header>
 
+<!-- 主區塊 (掃碼報到流程 or 預約/查詢主頁面) -->
+<div id="mainContainer" class="glass-card rounded-3xl shadow-xl overflow-hidden min-h-[500px]">
 
-    <!-- ========================================== -->
-    <!-- 以下為新增的【問題回報 UI 介面】 -->
-    <!-- ========================================== -->
-    
-    <!-- 問題回報懸浮按鈕 -->
-    <button onclick="document.getElementById('issueModal').style.display='flex'" style="position: fixed; bottom: 20px; right: 20px; padding: 12px 18px; background-color: #d93025; color: white; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-weight: bold; z-index: 999;">
-      ⚠️ 問題回報
-    </button>
+<!-- 載入中動畫 -->
+<div id="loadingOverlay" class="hidden flex flex-col items-center justify-center p-12">
+<div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+<p class="text-slate-500 font-medium">系統處理中，請稍候...</p>
+</div>
 
-    <!-- 問題回報彈出視窗 (Modal) -->
-    <div id="issueModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;">
-      <div style="background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 400px; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-        <h3 style="margin-top: 0; color: #d93025; border-bottom: 2px solid #fce8e6; padding-bottom: 10px;">系統問題回報</h3>
-        
-        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">學號：</label>
-        <input type="text" id="issueStudentId" placeholder="請輸入您的學號" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
-        
-        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">聯絡信箱：</label>
-        <input type="email" id="issueEmail" placeholder="請輸入 Email" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
-        
-        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">問題分類：</label>
-        <select id="issueCategory" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
-          <option value="掃碼報到異常">掃碼報到異常</option>
-          <option value="無法歸還打卡">無法歸還打卡</option>
-          <option value="座位已被佔用">座位已被佔用</option>
-          <option value="環境髒亂通報">環境髒亂通報</option>
-          <option value="其他系統問題">其他系統問題</option>
-        </select>
-        
-        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #333;">問題描述：</label>
-        <textarea id="issueDescription" rows="4" placeholder="請詳細描述您遇到的問題..." style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; resize: vertical;"></textarea>
-        
-        <div style="text-align: right;">
-          <button onclick="document.getElementById('issueModal').style.display='none'" style="padding: 10px 15px; margin-right: 10px; background: #e0e0e0; color: #333; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">取消</button>
-          <button onclick="submitIssueReport()" id="submitIssueBtn" style="padding: 10px 15px; background: #1a73e8; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">送出回報</button>
-        </div>
-      </div>
-    </div>
+<!-- 頁籤導覽列 (只在非掃碼情境下顯示) -->
+<div id="tabNavbar" class="flex border-b border-slate-200 bg-slate-50/50">
+<button onclick="switchTab('reserve')" id="tabBtnReserve" class="flex-1 py-4 text-center font-semibold text-blue-600 border-b-2 border-blue-600 transition-colors">
+<i class="fa-regular fa-calendar-plus mr-2"></i>自習座位預約
+</button>
+<button onclick="switchTab('query')" id="tabBtnQuery" class="flex-1 py-4 text-center font-semibold text-slate-500 hover:text-slate-700 transition-colors">
+<i class="fa-solid fa-magnifying-glass mr-2"></i>預約與違規查詢
+</button>
+</div>
 
+<!-- A. 預約頁面 -->
+<div id="tabReserve" class="p-6 md:p-8 space-y-6">
+<form id="reserveForm" onsubmit="handleReserveSubmit(event)" class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- 學號 -->
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">學號</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+<i class="fa-solid fa-id-card"></i>
+</span>
+<input type="text" id="reserveStudentId" required placeholder="例如: 41545100" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+</div>
+</div>
+<!-- Email -->
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">Email</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+<i class="fa-regular fa-envelope"></i>
+</span>
+<input type="email" id="reserveEmail" required placeholder="例如: name@example.com" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+</div>
+</div>
+<!-- 日期 -->
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">日期</label>
+<input type="date" id="reserveDate" required onchange="onReserveTimeChange()" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+</div>
+<!-- 時間範圍 -->
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">開始時間</label>
+<select id="reserveStart" required onchange="onReserveTimeChange()" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+<option value="" disabled selected>請選擇</option>
+<option value="09:00">09:00</option>
+<option value="10:00">10:00</option>
+<option value="11:00">11:00</option>
+<option value="12:00">12:00</option>
+<option value="13:00">13:00</option>
+<option value="14:00">14:00</option>
+<option value="15:00">15:00</option>
+<option value="16:00">16:00</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">結束時間</label>
+<select id="reserveEnd" required onchange="onReserveTimeChange()" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+<option value="" disabled selected>請選擇</option>
+<option value="10:00">10:00</option>
+<option value="11:00">11:00</option>
+<option value="12:00">12:00</option>
+<option value="13:00">13:00</option>
+<option value="14:00">14:00</option>
+<option value="15:00">15:00</option>
+<option value="16:00">16:00</option>
+<option value="17:00">17:00</option>
+</select>
+</div>
+</div>
+</div>
 
-    <!-- ========================================== -->
-    <!-- 以下為 JavaScript 邏輯區 -->
-    <!-- ========================================== -->
-    <script>
-      // 假設這是您原本用來打 API 的網址變數
-      // 如果是用 GAS 的測試環境，通常會自動帶入網址
-      const WEB_APP_URL = "您的 Web App 部署網址放這裡"; 
+<!-- 座位選取區塊 -->
+<div>
+<div class="flex items-center justify-between mb-3">
+<label class="text-sm font-semibold text-slate-700">選擇座位 (4 排 x 8 列)</label>
+<div class="flex items-center gap-4 text-xs">
+<span class="flex items-center gap-1"><span class="w-3 h-3 bg-green-100 border border-green-500 rounded-sm inline-block"></span>可選</span>
+<span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-100 border border-red-300 rounded-sm inline-block"></span>已佔用</span>
+<span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-600 rounded-sm inline-block"></span>已選</span>
+</div>
+</div>
 
-      // 您原本的 function，例如 checkin() 等等...
+<!-- 座位網格 -->
+<div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 overflow-x-auto">
+<div class="min-w-[640px] space-y-4">
+<!-- 講台標示 -->
+<div class="text-center py-2 bg-slate-200 text-slate-500 font-semibold text-xs rounded-lg uppercase tracking-wider">
+講台 / 教室前方
+</div>
+<!-- 第一排至第四排 -->
+<div id="seatsGrid" class="space-y-3">
+<!-- JS 動態生成座位列 -->
+</div>
+</div>
+</div>
+<!-- 已選座位隱藏欄位 -->
+<input type="hidden" id="selectedSeat" required>
+<p id="seatSelectionTip" class="text-slate-500 text-xs mt-2 italic text-center">請先選擇日期與時間，以顯示座位即時佔用狀態。</p>
+</div>
 
-      /**
-       * 新增的：提交問題回報 function
-       */
-      function submitIssueReport() {
-        const studentId = document.getElementById('issueStudentId').value.trim();
-        const email = document.getElementById('issueEmail').value.trim();
-        const category = document.getElementById('issueCategory').value;
-        const description = document.getElementById('issueDescription').value.trim();
+<button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/20">
+確認送出預約
+</button>
+</form>
+</div>
 
-        if (!studentId || !email || !description) {
-          alert("請完整填寫學號、信箱與問題描述！");
-          return;
-        }
+<!-- B. 查詢頁面 -->
+<div id="tabQuery" class="p-6 md:p-8 space-y-6 hidden">
+<div class="space-y-4">
+<p class="text-xs text-slate-500"><i class="fa-solid fa-shield-halved mr-1"></i>隱私保護：查詢記錄需要填寫您的學號及收到的任意一筆預約編號（可於預約通知信中取得）。</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">學號</label>
+<input type="text" id="queryStudentId" placeholder="請輸入學號" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm">
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">預約編號 (UUID)</label>
+<input type="text" id="queryReservationId" placeholder="請輸入您任一筆預約編號" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm font-mono">
+</div>
+</div>
+<button onclick="handleQuery()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl transition-colors">
+<i class="fa-solid fa-magnifying-glass mr-2"></i>驗證並查詢紀錄
+</button>
+</div>
 
-        const btn = document.getElementById('submitIssueBtn');
-        btn.innerText = "發送中...";
-        btn.disabled = true;
+<div id="queryResults" class="space-y-6 hidden">
+<!-- 停權警示 -->
+<div id="banAlert" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+<div class="flex">
+<div class="flex-shrink-0 text-red-500"><i class="fa-solid fa-circle-exclamation text-xl"></i></div>
+<div class="ml-3">
+<h3 class="text-sm font-bold text-red-800">帳號目前處於停權狀態！</h3>
+<p class="text-xs text-red-700 mt-1">累積違規達三次。停權到期日為：<span id="banExpiryText" class="font-bold"></span>。停權期間無法進行預約借用。</p>
+</div>
+</div>
+</div>
 
-        const payload = {
-          action: 'reportIssue',
-          args: [studentId, email, category, description]
-        };
+<!-- 違規警告區 -->
+<div id="violationWarningAlert" class="hidden bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-xl">
+<div class="flex">
+<div class="flex-shrink-0 text-yellow-500"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
+<div class="ml-3">
+<h3 class="text-sm font-bold text-yellow-800">帳號目前累積違規次數：<span id="vioCountText" class="font-bold"></span>/3</h3>
+<p class="text-xs text-yellow-700 mt-1">若累積違規滿三次將會停權一個月。請注意自習室借用規範並準時打卡報到與歸還。</p>
+</div>
+</div>
+</div>
 
-        // 呼叫 Code.gs 的 doPost
-        fetch(WEB_APP_URL, { 
-          method: 'POST',
-          body: JSON.stringify(payload)
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert("回報成功！管理員已收到您的信件通知。");
-            document.getElementById('issueModal').style.display = 'none'; 
-            document.getElementById('issueDescription').value = '';       
-          } else {
-            alert("回報失敗：" + data.message);
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          alert("網路連線異常，發送失敗，請稍後再試。");
-        })
-        .finally(() => {
-          btn.innerText = "送出回報";
-          btn.disabled = false;
-        });
-      }
-    </script>
-  </body>
-</html>
+<!-- 時數統計與基本資訊卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-5 shadow-sm space-y-2">
+<span class="text-xs text-blue-100 font-semibold uppercase tracking-wider">本學期累計使用時數</span>
+<div class="flex items-baseline gap-2">
+<span id="semesterHoursText" class="text-3xl font-bold tracking-tight">0.0</span>
+<span class="text-sm text-blue-100">小時</span>
+</div>
+<p class="text-[10px] text-blue-100/80">累計時數自報到起至歸還成功時計算</p>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between">
+<div class="space-y-1">
+<span class="text-xs text-slate-400 font-semibold">當前違規狀態</span>
+<p id="vioStatusText" class="font-bold text-slate-800 text-lg">正常</p>
+</div>
+<div class="h-10 w-10 rounded-full flex items-center justify-center bg-green-50 text-green-600" id="vioStatusBadge">
+<i class="fa-solid fa-circle-check text-xl"></i>
+</div>
+</div>
+</div>
+
+<!-- 預約列表 -->
+<div class="space-y-3">
+<h3 class="text-lg font-bold text-slate-900">預約與借用紀錄</h3>
+<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white">
+<table class="w-full text-sm text-left">
+<thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+<tr>
+<th class="p-3">日期</th>
+<th class="p-3">時間</th>
+<th class="p-3">座位</th>
+<th class="p-3">狀態</th>
+</tr>
+</thead>
+<tbody id="queryReserveTableBody" class="divide-y divide-slate-100">
+<!-- 動態填入預約列表 -->
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- 違規列表 -->
+<div class="space-y-3">
+<h3 class="text-lg font-bold text-slate-900">歷史違規紀錄</h3>
+<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white">
+<table class="w-full text-sm text-left">
+<thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+<tr>
+<th class="p-3">紀錄時間</th>
+<th class="p-3">違規日期</th>
+<th class="p-3">違規時段</th>
+<th class="p-3">違規事由</th>
+</tr>
+</thead>
+<tbody id="queryVioTableBody" class="divide-y divide-slate-100">
+<!-- 動態填入違規紀錄 -->
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+<!-- C. 掃碼報到/歸還專屬頁面 (座位的 QR Code 掃入後在此執行) -->
+<div id="scanFlowPage" class="p-6 md:p-8 space-y-6 hidden">
+<div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-xl mb-4">
+<h3 class="text-sm font-bold text-blue-900"><i class="fa-solid fa-qrcode mr-2"></i>已掃描座位：<span id="scannedSeatText" class="font-mono bg-blue-100 px-2 py-0.5 rounded text-blue-700"></span></h3>
+</div>
+
+<!-- 登入驗證（掃碼後要先輸入學號來找預約） -->
+<div id="scanLoginBlock" class="space-y-4">
+<p class="text-slate-600 text-sm">請輸入您的學號，系統將自動比對您是否有此座位的有效預約紀錄。</p>
+<div class="flex gap-3">
+<input type="text" id="scanStudentId" placeholder="例如: 41545100" class="flex-1 rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+<button onclick="handleScanLogin()" class="px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors">
+驗證預約
+</button>
+</div>
+</div>
+
+<!-- 報到打卡表單 (Check-in Form) -->
+<div id="checkinFormBlock" class="hidden space-y-6">
+<div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+<h4 class="font-bold text-slate-800 text-sm">預約確認</h4>
+<p class="text-xs text-slate-500">時段：<span id="checkinTimeRangeText" class="font-semibold text-slate-700"></span></p>
+</div>
+
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">確認問題：目前座位是否乾淨？</label>
+<div class="flex gap-4">
+<label class="flex-1 flex items-center justify-center p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+<input type="radio" name="cleanliness" value="Clean" checked onchange="toggleCheckinReport(false)" class="mr-2 h-4 w-4 text-blue-600"> 乾淨無垃圾
+</label>
+<label class="flex-1 flex items-center justify-center p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+<input type="radio" name="cleanliness" value="Dirty" onchange="toggleCheckinReport(true)" class="mr-2 h-4 w-4 text-blue-600"> 不乾淨 / 有遺留垃圾或物品
+</label>
+</div>
+</div>
+
+<!-- 不乾淨通報區域 (通報時需強制上傳照片) -->
+<div id="checkinReportArea" class="hidden space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-600 mb-2">異常描述 (可輸入遺留物品或髒亂狀況)</label>
+<textarea id="checkinReportMessage" placeholder="請輸入說明（例如：桌上有飲料杯、有垃圾等）" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 text-sm h-24 resize-none"></textarea>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-slate-600 mb-2">拍攝異常照片上傳 (通報髒亂時必須拍照)</label>
+<div class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative" onclick="triggerCamera('checkin')">
+<input type="file" accept="image/*" capture="environment" id="checkinCameraInput" class="hidden" onchange="handlePhotoUpload(this, 'checkin')">
+<div id="checkinCameraPlaceholder" class="text-center space-y-2">
+<i class="fa-solid fa-camera text-3xl text-slate-400"></i>
+<p class="text-xs text-slate-500 font-semibold">點擊啟動相機拍照</p>
+</div>
+<img id="checkinPhotoPreview" class="hidden max-h-48 rounded-xl object-contain shadow-sm">
+</div>
+</div>
+</div>
+</div>
+
+<button onclick="submitCheckin()" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-green-600/20">
+完成報到打卡
+</button>
+</div>
+
+<!-- 現場登記暨報到表單 (Ad-hoc Booking & Check-in Form) -->
+<div id="adhocFormBlock" class="hidden space-y-6">
+<div class="bg-green-50 border-l-4 border-green-600 p-4 rounded-r-xl">
+<h4 class="font-bold text-green-900 text-sm">現場登記借用</h4>
+<p class="text-xs text-green-700 mt-1" id="adhocMessageText"></p>
+</div>
+
+<div class="space-y-4">
+<!-- Email -->
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">Email (首次登記或通知用)</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+<i class="fa-regular fa-envelope"></i>
+</span>
+<input type="email" id="adhocEmail" required placeholder="例如: name@example.com" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+</div>
+</div>
+
+<!-- 使用截止時間 -->
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">預計使用結束時間 (每次最長 3 小時)</label>
+<select id="adhocEndHour" required class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all bg-white">
+<!-- JS 動態生成整點選項 -->
+</select>
+</div>
+
+<!-- 清潔檢查 -->
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">確認問題：目前座位是否乾淨？</label>
+<div class="flex gap-4">
+<label class="flex-1 flex items-center justify-center p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+<input type="radio" name="adhocCleanliness" value="Clean" checked onchange="toggleAdHocReport(false)" class="mr-2 h-4 w-4 text-blue-600"> 乾淨無垃圾
+</label>
+<label class="flex-1 flex items-center justify-center p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+<input type="radio" name="adhocCleanliness" value="Dirty" onchange="toggleAdHocReport(true)" class="mr-2 h-4 w-4 text-blue-600"> 不乾淨 / 有遺留垃圾或物品
+</label>
+</div>
+</div>
+
+<!-- 不乾淨通報區域 (通報時需強制上傳照片) -->
+<div id="adhocReportArea" class="hidden space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-600 mb-2">異常描述 (可輸入遺留物品或髒亂狀況)</label>
+<textarea id="adhocReportMessage" placeholder="請輸入說明（例如：桌上有飲料杯、有垃圾等）" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 text-sm h-24 resize-none"></textarea>
+</div>
+
+<div>
+<label class="block text-xs font-semibold text-slate-600 mb-2">拍攝異常照片上傳 (通報髒亂時必須拍照)</label>
+<div class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative" onclick="triggerCamera('adhoc')">
+<input type="file" accept="image/*" capture="environment" id="adhocCameraInput" class="hidden" onchange="handlePhotoUpload(this, 'adhoc')">
+<div id="adhocCameraPlaceholder" class="text-center space-y-2">
+<i class="fa-solid fa-camera text-3xl text-slate-400"></i>
+<p class="text-xs text-slate-500 font-semibold">點擊啟動相機拍照</p>
+</div>
+<img id="adhocPhotoPreview" class="hidden max-h-48 rounded-xl object-contain shadow-sm">
+</div>
+</div>
+</div>
+</div>
+
+<button onclick="submitAdHocBooking()" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-green-600/20">
+登記並立即報到使用
+</button>
+</div>
+
+<!-- 歸還打卡表單 (Check-out Form) -->
+<div id="checkoutFormBlock" class="hidden space-y-6">
+<div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-xl">
+<h4 class="font-bold text-yellow-800 text-sm">歸還座位</h4>
+<p class="text-xs text-yellow-700 mt-1">您目前正使用此座位。離開前請拍照確認座位已整理乾淨且無遺留物品。</p>
+</div>
+
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">拍攝座位乾淨照片 (離開前強制拍照確認)</label>
+<div class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative" onclick="triggerCamera('checkout')">
+<input type="file" accept="image/*" capture="environment" id="checkoutCameraInput" class="hidden" onchange="handlePhotoUpload(this, 'checkout')">
+<div id="checkoutCameraPlaceholder" class="text-center space-y-2">
+<i class="fa-solid fa-camera text-3xl text-slate-400"></i>
+<p class="text-xs text-slate-500 font-semibold">點擊啟動相機拍照</p>
+</div>
+<img id="checkoutPhotoPreview" class="hidden max-h-48 rounded-xl object-contain shadow-sm">
+</div>
+</div>
+</div>
+
+<button onclick="submitCheckout()" class="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-orange-600/20">
+完成歸還打卡
+</button>
+</div>
+
+<button onclick="resetToHome()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition-colors">
+回預約主首頁
+</button>
+</div>
+
+</div>
+
+<!-- 底部版權宣告與資訊 -->
+<footer class="text-center mt-8 text-xs text-slate-500">
+<p>© 2026 NFU NFU-自習室登記借用及歸還系統. All Rights Reserved.</p>
+</footer>
+</div>
+
+<!-- ========================================== -->
+<!-- 新增的【問題回報 UI 介面】 -->
+<!-- ========================================== -->
+
+<!-- 問題回報懸浮按鈕 -->
+<button onclick="document.getElementById('issueModal').classList.remove('hidden'); document.getElementById('issueModal').classList.add('flex');" class="fixed bottom-6 right-6 px-5 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-full shadow-lg shadow-red-500/30 transition-all z-40 flex items-center gap-2 border border-red-400">
+<i class="fa-solid fa-bullhorn"></i> 問題回報
+</button>
+
+<!-- 問題回報彈出視窗 (Modal) -->
+<div id="issueModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
+<div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all">
+<div class="p-5 border-b border-red-100 flex justify-between items-center bg-red-50">
+<h3 class="text-lg font-bold text-red-600"><i class="fa-solid fa-triangle-exclamation mr-2"></i>系統異常回報</h3>
+<button onclick="document.getElementById('issueModal').classList.add('hidden'); document.getElementById('issueModal').classList.remove('flex');" class="text-red-400 hover:text-red-600 transition-colors w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-100">
+<i class="fa-solid fa-xmark text-lg"></i>
+</button>
+</div>
+
+<div class="p-6 space-y-4">
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">學號</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-solid fa-id-card"></i></span>
+<input type="text" id="issueStudentId" placeholder="例如: 41545100" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all">
+</div>
+</div>
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">聯絡信箱</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400"><i class="fa-regular fa-envelope"></i></span>
+<input type="email" id="issueEmail" placeholder="例如: name@example.com" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all">
+</div>
+</div>
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">問題分類</label>
+<select id="issueCategory" class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all bg-white">
+<option value="掃碼報到異常">掃碼報到異常</option>
+<option value="無法歸還打卡">無法歸還打卡</option>
+<option value="座位已被佔用">座位已被佔用</option>
+<option value="環境髒亂通報">環境髒亂通報</option>
+<option value="其他系統問題">其他系統問題</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-semibold text-slate-700 mb-2">問題描述</label>
+<textarea id="issueDescription" rows="4" placeholder="請詳細描述您遇到的狀況..." class="w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all resize-none text-sm"></textarea>
+</div>
+</div>
+
+<div class="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+<button onclick="document.getElementById('issueModal').classList.add('hidden'); document.getElementById('issueModal').classList.remove('flex');" class="px-5 py-2.5 rounded-xl font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-colors">取消</button>
+<button id="submitIssueBtn" onclick="submitIssueReport()" class="px-5 py-2.5 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-700 shadow-md shadow-red-600/20 transition-colors">送出回報</button>
+</div>
+</div>
+</div>
+
+<!-- ========================================== -->
+<!-- JavaScript 邏輯區 -->
+<!-- ========================================== -->
+<script>
+// 如果不在 Google Apps Script 容器環境中，自動建立 google.script.run 的 Polyfill 相容層 (以 POST 呼叫 Web App 解決帳號衝突)
+if (typeof google === 'undefined') {
+window.google = {
+script: {
+run: {
+withSuccessHandler: function(onSuccess) {
+this._onSuccess = onSuccess;
+return this;
