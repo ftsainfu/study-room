@@ -31,7 +31,7 @@ scannedSeatCode = urlParams.get('seat') || "";
 }
 </script>
 </head>
-<body class="text-slate-800 antialiased p-4 md:p-8">
+<body class="text-slate-800 antialiased p-4 md:p-8 overflow-x-hidden">
 <div class="max-w-4xl mx-auto">
 <!-- Header -->
 <header class="text-center mb-8">
@@ -72,8 +72,7 @@ scannedSeatCode = urlParams.get('seat') || "";
 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
 <i class="fa-solid fa-id-card"></i>
 </span>
-                <input type="text" id="reserveStudentId" required placeholder="例如: B14024" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
-                <input type="text" id="reserveStudentId" required placeholder="例如: 41545100" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+<input type="text" id="reserveStudentId" required placeholder="例如: 41545100" class="pl-10 w-full rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
 </div>
 </div>
 <!-- Email -->
@@ -135,18 +134,25 @@ scannedSeatCode = urlParams.get('seat') || "";
 </div>
 </div>
 
-<!-- 座位網格 -->
-<div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 overflow-x-auto">
-<div class="min-w-[640px] space-y-4">
-<!-- 講台標示 -->
-<div class="text-center py-2 bg-slate-200 text-slate-500 font-semibold text-xs rounded-lg uppercase tracking-wider">
-講台 / 教室前方
-</div>
-<!-- 第一排至第四排 -->
-<div id="seatsGrid" class="space-y-3">
-<!-- JS 動態生成座位列 -->
-</div>
-</div>
+<!-- 座位網格 (優化手機版左右滑動) -->
+<div class="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 overflow-x-auto touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+  <!-- 手機版專屬滑動提示 -->
+  <div class="text-center mb-3 md:hidden">
+    <span class="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm animate-bounce">
+      <i class="fa-solid fa-arrows-left-right mr-1"></i> 請左右滑動查看完整座位表
+    </span>
+  </div>
+  
+  <div class="min-w-[640px] space-y-4">
+    <!-- 講台標示 -->
+    <div class="text-center py-2 bg-slate-200 text-slate-500 font-semibold text-xs rounded-lg uppercase tracking-wider">
+      講台 / 教室前方
+    </div>
+    <!-- 第一排至第四排 -->
+    <div id="seatsGrid" class="space-y-3">
+      <!-- JS 動態生成座位列 -->
+    </div>
+  </div>
 </div>
 <!-- 已選座位隱藏欄位 -->
 <input type="hidden" id="selectedSeat" required>
@@ -226,7 +232,7 @@ scannedSeatCode = urlParams.get('seat') || "";
 <!-- 預約列表 -->
 <div class="space-y-3">
 <h3 class="text-lg font-bold text-slate-900">預約與借用紀錄</h3>
-<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white">
+<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white touch-pan-x" style="-webkit-overflow-scrolling: touch;">
 <table class="w-full text-sm text-left">
 <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
 <tr>
@@ -246,7 +252,7 @@ scannedSeatCode = urlParams.get('seat') || "";
 <!-- 違規列表 -->
 <div class="space-y-3">
 <h3 class="text-lg font-bold text-slate-900">歷史違規紀錄</h3>
-<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white">
+<div class="overflow-x-auto border border-slate-200 rounded-xl bg-white touch-pan-x" style="-webkit-overflow-scrolling: touch;">
 <table class="w-full text-sm text-left">
 <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
 <tr>
@@ -275,8 +281,7 @@ scannedSeatCode = urlParams.get('seat') || "";
 <div id="scanLoginBlock" class="space-y-4">
 <p class="text-slate-600 text-sm">請輸入您的學號，系統將自動比對您是否有此座位的有效預約紀錄。</p>
 <div class="flex gap-3">
-            <input type="text" id="scanStudentId" placeholder="輸入學號" class="flex-1 rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
-            <input type="text" id="scanStudentId" placeholder="例如: 41545100" class="flex-1 rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+<input type="text" id="scanStudentId" placeholder="例如: 41545100" class="flex-1 rounded-xl border border-slate-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
 <button onclick="handleScanLogin()" class="px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors">
 驗證預約
 </button>
@@ -435,7 +440,7 @@ scannedSeatCode = urlParams.get('seat') || "";
 </div>
 
 <!-- ========================================== -->
-<!-- 以下為新增的【問題回報 UI 介面】 -->
+<!-- 以下為【問題回報 UI 介面】 -->
 <!-- ========================================== -->
 
 <!-- 問題回報懸浮按鈕 -->
@@ -514,7 +519,7 @@ const backendFunctions = [
 'cancelReservation', 'checkBanStatus', 'getActiveReservationForCheckout', 
 'getActiveReservationForCheckin', 'checkSeatAvailabilityForAdHoc', 
 'performCheckin', 'performCheckout', 'createAdHocReservationAndCheckin',
-'reportIssue' // ←【新增路由：問題回報】
+'reportIssue' // 問題回報路由
 ];
 
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx9gCLKPu-Ji38iOIVFhZmIj0aC9SkjDBCXy_jPE2Xg4dZV99Gy1uuE-1mot3ff-vhPUg/exec";
@@ -731,10 +736,11 @@ google.script.run
 showLoading(false);
 alert(result.message);
 if (result.success) {
-document.getElementById('reserveForm').reset();
+// ✅ 修改：保留日期與時間，只清空個資與選擇的座位，並重新整理座位表讓剛剛的座位變紅
+document.getElementById('reserveStudentId').value = "";
+document.getElementById('reserveEmail').value = "";
 document.getElementById('selectedSeat').value = "";
-occupiedSeats = [];
-renderSeatsGrid();
+onReserveTimeChange(); 
 }
 })
 .withFailureHandler(function(err) {
